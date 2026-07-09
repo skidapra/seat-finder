@@ -2,17 +2,17 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>좌석 찾기</title>
+<title>좌석·시설 찾기</title>
 <style>
   :root{
     --ink:#1b2430;
-    --paper:#f6f5f1;
-    --line:#d8d4c8;
-    --accent:#1f5f5b;
-    --accent-soft:#e4efee;
+    --paper:#fbf1e6;
+    --line:#c9beaa;
+    --accent:#1f8577;
+    --accent-soft:#d8f5f0;
     --warn:#b3541e;
     --warn-soft:#f6e8dd;
-    --gray:#8b8b83;
+    --gray:#8b8377;
     --white:#ffffff;
     --radius:10px;
     --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
@@ -195,10 +195,10 @@
     flex:1;
     overflow:auto;
     position:relative;
-    background:#eceae3;
+    background:#f0e6d8;
     background-image:
-      linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px);
+      linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
     background-size:24px 24px;
   }
   .floor-view{
@@ -315,32 +315,51 @@
   .team-legend{
     max-width:1600px;
     margin:0 auto;
-    padding:0 20px 12px;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
+    padding:0 20px 14px;
+  }
+  .team-legend-card{
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--white);
+    overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,0.04);
   }
   .legend-category{
     display:flex;
     align-items:flex-start;
-    gap:10px;
   }
+  .legend-category:not(:last-child){
+    border-bottom:1px solid var(--line);
+  }
+  .legend-category.cat-team{background:#eef6ee;}
+  .legend-category.cat-team .legend-cat-label{background:#dcecdc;}
+  .legend-category.cat-meeting-room{background:#eaf3f6;}
+  .legend-category.cat-meeting-room .legend-cat-label{background:#d7e9ee;}
+  .legend-category.cat-space{background:#eef1f8;}
+  .legend-category.cat-space .legend-cat-label{background:#dde3f2;}
+  .legend-category.cat-facility{background:#f4eef8;}
+  .legend-category.cat-facility .legend-cat-label{background:#e7dcf0;}
   .legend-cat-label{
-    font-size:11.5px;
+    font-size:12px;
     font-weight:700;
-    color:var(--gray);
+    color:var(--ink);
     background:var(--paper);
-    border:1px solid var(--line);
-    padding:5px 10px;
-    border-radius:12px;
+    padding:10px 14px;
     white-space:nowrap;
     flex-shrink:0;
-    margin-top:1px;
+    width:120px;
+    border-right:1px solid var(--line);
+    align-self:stretch;
+    display:flex;
+    align-items:center;
   }
   .legend-cat-items{
     display:flex;
     flex-wrap:wrap;
     gap:8px;
+    padding:9px 14px;
+    align-content:flex-start;
+    flex:1;
   }
   .legend-team{
     display:inline-flex;
@@ -373,10 +392,19 @@
   .marker.empty{background:#b7b39f;}
   .marker.filled{background:var(--accent);}
   .marker.seat{background:var(--accent);width:14px;height:14px;}
-  .marker.seat.room-label{
-    background:#5b7a8c;
-    border-radius:4px;
-    width:16px;height:16px;
+  .marker.seat.room-type{
+    background:#2f6f8f;
+    border-radius:6px;
+    width:18px;height:18px;
+  }
+  .marker.seat.facility-type{
+    background:#8a5cb5;
+    border-radius:3px;
+    width:15px;height:15px;
+    transform:translate(-50%,-50%) rotate(45deg);
+  }
+  .marker.seat.facility-type:hover{
+    transform:translate(-50%,-50%) rotate(45deg) scale(1.35);
   }
   .marker.seat.vacant{
     background:#e4e1d6 !important;
@@ -417,6 +445,17 @@
     z-index:25;
     pointer-events:none;
     animation:pulse-ring 1.2s ease-in-out infinite;
+  }
+  .seat-highlight-ring{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    width:38px;height:38px;
+    border-radius:50%;
+    border:3px solid #e0362b;
+    background:rgba(224,54,43,0.15);
+    z-index:24;
+    pointer-events:none;
+    animation:pulse-ring 1.1s ease-in-out infinite;
   }
   @keyframes pulse-ring{
     0%{transform:translate(-50%,-50%) scale(0.85); opacity:1;}
@@ -485,6 +524,75 @@
     display:none;
   }
   .popover.show{display:block;}
+  .popover.wide{width:420px;max-width:calc(100vw - 20px);}
+  .help-content h4{
+    font-size:13.5px;
+    margin:14px 0 6px;
+    color:var(--ink);
+  }
+  .help-content h4:first-child{margin-top:2px;}
+  .help-content p, .help-content li{
+    font-size:13px;
+    color:var(--ink);
+    line-height:1.5;
+  }
+  .help-content ul{
+    margin:4px 0 0;
+    padding-left:18px;
+  }
+  .help-content .shape-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:6px 0;
+    font-size:13px;
+  }
+  .help-content .shape-swatch{
+    width:16px;height:16px;
+    flex-shrink:0;
+    display:inline-block;
+  }
+  .log-list{
+    max-height:50vh;
+    overflow-y:auto;
+    margin-top:8px;
+    border:1px solid var(--line);
+    border-radius:8px;
+  }
+  .log-row{
+    padding:9px 12px;
+    border-bottom:1px solid var(--line);
+  }
+  .log-row:last-child{border-bottom:none;}
+  .log-row-top{
+    font-size:13px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .log-floor{
+    font-family:var(--mono);
+    font-size:11px;
+    background:var(--accent-soft);
+    color:var(--accent);
+    padding:1px 6px;
+    border-radius:4px;
+  }
+  .log-editor{
+    font-size:11.5px;
+    color:var(--gray);
+  }
+  .log-time{
+    font-size:11px;
+    color:var(--gray);
+    margin-left:auto;
+  }
+  .log-diffs{
+    font-size:12px;
+    color:var(--ink);
+    margin-top:3px;
+  }
   .popover h3{
     margin:0 0 2px;
     font-size:15px;
@@ -615,6 +723,27 @@
     display:flex;
     justify-content:space-between;
   }
+  .footer-right-group{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .footer-admin-btn{
+    font-size:10.5px;
+    color:#c4c1b6;
+    background:none;
+    border:none;
+    padding:2px 4px;
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-style:dotted;
+  }
+  .footer-admin-btn:hover{color:var(--gray);}
+  .footer-admin-btn.on{
+    color:#2d6cdf;
+    font-weight:700;
+    text-decoration:none;
+  }
   .toast{
     position:fixed;
     bottom:22px;left:50%;
@@ -630,13 +759,29 @@
     pointer-events:none;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .help-fab{
+    position:fixed;
+    top:16px;
+    right:16px;
+    z-index:150;
+    padding:8px 16px;
+    border-radius:20px;
+    border:1px solid var(--line);
+    background:var(--white);
+    color:var(--ink);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  }
+  .help-fab:hover{background:var(--paper);}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div class="title-row">
-      <h1>좌석 찾기</h1>
+      <h1>좌석·시설 찾기</h1>
       <span class="sub">시그니쳐타워 4F · 5F · 7F</span>
     </div>
     <div class="search-wrap">
@@ -645,9 +790,9 @@
     </div>
     <div class="tabs" id="tabs"></div>
     <div class="backup-row">
-      <button class="backup-btn admin-toggle" id="adminToggleBtn">🔒 관리자 모드</button>
-      <button class="backup-btn" id="exportBtn">⬇ 백업 내보내기</button>
       <span id="adminOnlyBtns">
+        <button class="backup-btn" id="changeLogBtn">📋 수정 목록</button>
+        <button class="backup-btn" id="exportBtn">⬇ 백업 내보내기</button>
         <button class="backup-btn" id="importBtn">⬆ 백업 가져오기</button>
         <button class="backup-btn" id="syncBtn">🔄 명단 동기화</button>
       </span>
@@ -655,10 +800,14 @@
       <span class="backup-hint" id="modeHint">작업 중간중간 내보내기를 눌러 저장해 두세요</span>
     </div>
   </header>
+  <button class="help-fab" id="helpBtn">❓ 이용 방법</button>
   <main id="main"></main>
   <footer>
     <span id="footerLeft">2026.7.1 배치도 기준 · 좌석 배정은 직접 입력해 주세요</span>
-    <span id="footerRight"></span>
+    <span class="footer-right-group">
+      <span id="footerRight"></span>
+      <button class="footer-admin-btn admin-toggle" id="adminToggleBtn">관리자</button>
+    </span>
   </footer>
 </div>
 
@@ -4880,6 +5029,47 @@ async function persistFloorSeats(floor, seatArr){
   return false;
 }
 
+const CHANGE_LOG_KEY = 'changeLog';
+const CHANGE_LOG_MAX = 300;
+
+function summarizeFieldChanges(before, after){
+  const fields = [
+    ['name','이름'], ['dept','소속'], ['part','파트'], ['ext','내선번호'], ['duty','담당업무'], ['vacant','공석여부']
+  ];
+  const diffs = [];
+  for(const [key, label] of fields){
+    const b = before[key], a = after[key];
+    if(String(b||'') !== String(a||'')){
+      const bDisp = key==='vacant' ? (b?'예':'아니오') : (b || '(없음)');
+      const aDisp = key==='vacant' ? (a?'예':'아니오') : (a || '(없음)');
+      diffs.push(`${label}: ${bDisp} → ${aDisp}`);
+    }
+  }
+  return diffs;
+}
+
+async function logChange(floor, seatId, editor, before, after){
+  const diffs = summarizeFieldChanges(before, after);
+  if(!diffs.length) return; // nothing actually changed
+  try{
+    let log = [];
+    try{
+      const res = await gsGet(CHANGE_LOG_KEY);
+      if(res && res.value) log = JSON.parse(res.value);
+    }catch(e){ /* no log yet */ }
+    log.push({
+      time: new Date().toISOString(),
+      floor, seatId, editor,
+      diffs,
+      afterName: after.name || (after.vacant ? '공석' : '')
+    });
+    if(log.length > CHANGE_LOG_MAX) log = log.slice(log.length - CHANGE_LOG_MAX);
+    await gsSet(CHANGE_LOG_KEY, JSON.stringify(log));
+  }catch(e){
+    console.warn('change log failed to save', e); // never block the actual save on this
+  }
+}
+
 async function migrateExecOffices(){
   // one-time, idempotent: turn the old auto-detected executive office markers
   // into regular editable seat pins, same as everyone else
@@ -4952,19 +5142,24 @@ function nearestDept(floor, x, y){
   return best;
 }
 
-function findSeatForName(name){
+function findAllSeatsForName(name){
+  const results = [];
   for(const floor of Object.keys(DATA.floors)){
     const f = DATA.floors[floor];
     for(const z of f.zones){
       if(z.members && z.members.some(m => m.name === name)){
-        return {floor, id:z.id, type:'zone', x:z.x, y:z.y, label:`${z.dept} 구역 (개별석 미지정)`};
+        results.push({floor, id:z.id, type:'zone', x:z.x, y:z.y, label:`${z.dept} 구역 (개별석 미지정)`});
       }
     }
     for(const s of seats[floor]){
-      if(s.name === name) return {floor, id:s.id, type:'seat', x:s.x, y:s.y, label:'배정 좌석'};
+      if(s.name === name) results.push({floor, id:s.id, type:'seat', x:s.x, y:s.y, label:'배정 좌석'});
     }
   }
-  return null;
+  return results;
+}
+
+function findSeatForName(name){
+  return findAllSeatsForName(name)[0] || null;
 }
 
 function renderTabs(){
@@ -5000,11 +5195,17 @@ function isOutsourced(dept){
   return !!dept && dept.includes('외주업체');
 }
 
+function endsWithRoomSuffix(name){
+  if(!name) return false;
+  const n = name.trim();
+  return /(실|룸|창고)\s*\d*\s*(\(.*\))?$/.test(n) || n.includes('라운지');
+}
+
 function categorizeLegendItem(value, kind){
   if(kind === 'team' && isOutsourced(value)) return '외주';
-  if(kind === 'team' && isRosterDept(value)) return '팀';
-  if(/회의실|세미나실/.test(value)) return '회의실';
-  return '기타';
+  if(kind === 'team' && isRosterDept(value)) return 'Team';
+  if(/회의실|세미나/.test(value)) return 'Meeting Room';
+  return endsWithRoomSuffix(value) ? 'Space' : 'Facility';
 }
 
 let legendOpen = { "4F":false, "5F":false, "7F":false };
@@ -5022,6 +5223,8 @@ function renderFloor(floor){
     const isHi = hiIds.includes(s.id);
     const isVacant = s.vacant === true;
     const isRoomLabel = !isVacant && !s.dept && !s.ext;
+    const isRoomType = isRoomLabel && endsWithRoomSuffix(s.name);
+    const isFacilityType = isRoomLabel && !isRoomType;
     const isSelected = sel.has(s.id);
     const isOut = !isRoomLabel && !isVacant && isOutsourced(s.dept);
     const color = (isRoomLabel || isVacant) ? null : (isOut ? '#c9822f' : colorForDept(s.dept));
@@ -5034,7 +5237,8 @@ function renderFloor(floor){
       ? `공석${s.dept ? ' · '+s.dept : ''}`
       : `${s.name || '(이름 없음)'}${partLabel ? ' · '+partLabel : (s.dept ? ' · '+s.dept : '')}`;
     markers += `<div class="marker-wrap ${isHi&&showHiLabels?'show-label':''}" style="position:absolute;left:${s.x}%;top:${s.y}%;">
-      <div class="marker seat ${isRoomLabel?'room-label':''} ${isVacant?'vacant':''} ${isOut?'outsourced':''} ${isHi?'highlight':''} ${isSelected?'selected':''}" style="${styleAttr}" data-floor="${floor}" data-id="${s.id}" data-type="seat"></div>
+      ${isHi && showHiLabels ? `<div class="seat-highlight-ring" style="left:0;top:0;"></div>` : ''}
+      <div class="marker seat ${isRoomType?'room-type':''} ${isFacilityType?'facility-type':''} ${isVacant?'vacant':''} ${isOut?'outsourced':''} ${isHi?'highlight':''} ${isSelected?'selected':''}" style="${styleAttr}" data-floor="${floor}" data-id="${s.id}" data-type="seat"></div>
       <div class="marker-label">${labelText}</div>
     </div>`;
   }
@@ -5042,6 +5246,7 @@ function renderFloor(floor){
     const isTeam = z.members && z.members.length;
     const isHi = hiIds.includes(z.id);
     markers += `<div class="marker-wrap ${isHi&&showHiLabels?'show-label':''}" style="position:absolute;left:${z.x}%;top:${z.y}%;">
+      ${isHi && showHiLabels ? `<div class="seat-highlight-ring" style="left:0;top:0;"></div>` : ''}
       <div class="marker zone ${isTeam?'':'info'} ${isHi?'highlight':''}" data-floor="${floor}" data-id="${z.id}" data-type="zone"></div>
       <div class="marker-label">${z.dept || z.label || z.id}${isTeam ? ' ('+z.members.length+'명)' : ''}</div>
     </div>`;
@@ -5054,18 +5259,54 @@ function renderFloor(floor){
 
   const sortedDepts = [...deptsHere].sort();
   const sortedRoomLabels = [...roomLabelsHere].sort();
-  const categoryOrder = ['팀', '회의실', '기타'];
-  const grouped = {'팀':[], '회의실':[], '기타':[]};
-  for(const d of sortedDepts) if(!isOutsourced(d)) grouped[categorizeLegendItem(d, 'team')].push({value:d, kind:'team'});
-  for(const r of sortedRoomLabels) grouped[categorizeLegendItem(r, 'room')].push({value:r, kind:'room'});
-  const legendHtml = categoryOrder.filter(cat=>grouped[cat].length).map(cat=>{
-    const items = grouped[cat].map(({value, kind})=>
-      `<span class="legend-team" data-value="${value}" data-kind="${kind}" data-floor="${floor}"><span class="dot" style="background:${kind==='room'?'#5b7a8c':(isOutsourced(value)?'#c9822f':colorForDept(value))}"></span>${value}</span>`
+  const categoryOrder = ['Team', 'Meeting Room', 'Space', 'Facility'];
+  const grouped = {'Team':[], 'Meeting Room':[], 'Space':[], 'Facility':[]};
+  function dotColorForCategory(cat, value){
+    if(cat === 'Team') return colorForDept(value);
+    if(cat === 'Meeting Room' || cat === 'Space') return '#2f6f8f';
+    return '#8a5cb5'; // Facility
+  }
+  for(const d of sortedDepts){
+    if(isOutsourced(d)) continue; // outsourced seats stay out of this list entirely
+    const cat = categorizeLegendItem(d, 'team');
+    grouped[cat].push({value:d, kind:'team', cat});
+  }
+  for(const r of sortedRoomLabels){
+    const cat = categorizeLegendItem(r, 'room');
+    grouped[cat].push({value:r, kind:'room', cat});
+  }
+  const spacePriorityByFloor = {
+    '4F': ['라운지','포커스룸','수면실','서버룸','전산운영실','시스템운용실','프로젝트개발실','노동조합실'],
+    '5F': ['라운지','이사회실','포커스룸','창고','방송실','방산업무실','스캔실','면담실','프로젝트실']
+  };
+  const spacePriority = spacePriorityByFloor[floor] || [];
+  function spaceSortKey(name){
+    for(let i=0;i<spacePriority.length;i++){
+      if(name.includes(spacePriority[i])) return i;
+    }
+    return spacePriority.length;
+  }
+  grouped['Space'].sort((a,b)=> spaceSortKey(a.value)-spaceSortKey(b.value) || a.value.localeCompare(b.value));
+
+  const facilityDisplayOrder = ['사용인감','법인인감','도서검색','구매PC','OA','OA/음료','스낵/커피','우편','자동심장충격기'];
+  const facilityMatchOrder = ['사용인감','법인인감','도서검색','구매PC','OA/음료','OA','스낵/커피','우편','자동심장충격기'];
+  function facilitySortKey(name){
+    for(const kw of facilityMatchOrder){
+      if(name.includes(kw)) return facilityDisplayOrder.indexOf(kw);
+    }
+    return facilityDisplayOrder.length;
+  }
+  grouped['Facility'].sort((a,b)=> facilitySortKey(a.value)-facilitySortKey(b.value) || a.value.localeCompare(b.value));
+  const legendHtml = categoryOrder.filter(cat=>grouped[cat] && grouped[cat].length).map(cat=>{
+    const items = grouped[cat].map(({value, kind, cat: itemCat})=>
+      `<span class="legend-team" data-value="${value}" data-kind="${kind}" data-floor="${floor}"><span class="dot" style="background:${dotColorForCategory(itemCat, value)}"></span>${value}</span>`
     ).join('');
-    return `<div class="legend-category"><span class="legend-cat-label">${cat}</span><div class="legend-cat-items">${items}</div></div>`;
+    const catClass = 'cat-' + cat.toLowerCase().replace(/\s+/g,'-');
+    return `<div class="legend-category ${catClass}"><span class="legend-cat-label">${cat}</span><div class="legend-cat-items">${items}</div></div>`;
   }).join('');
 
   const selCount = sel.size;
+  const totalLegendItems = Object.values(grouped).reduce((sum,arr)=>sum+arr.length,0);
 
   return `<div class="floor-view ${floor===currentFloor?'active':''}" data-floor="${floor}">
     <div class="floor-toolbar">
@@ -5075,10 +5316,10 @@ function renderFloor(floor){
       <button class="add-toggle align-toggle ${alignMode[floor]?'on':''}" data-floor="${floor}" id="alignToggle-${floor}">
         ${alignMode[floor] ? '정렬 모드 · 좌석을 클릭해 선택' : '↕ 정렬 모드'}
       </button>` : ''}
-      <span class="add-hint">${isAdmin ? (addMode[floor] ? '책상+의자 그림 위를 클릭하면 이름을 입력할 수 있어요' : (alignMode[floor] ? `${selCount}개 선택됨 · 같은 줄/열의 좌석들을 클릭해서 선택하세요` : '실제 책상이 있는 자리를 클릭해서 이름을 배정하세요')) : '좌석을 클릭하면 정보를 확인할 수 있어요'}</span>
-      ${sortedDepts.length ? `<button class="legend-toggle" data-floor="${floor}" id="legendToggle-${floor}">${legendOpen[floor] ? '팀 색상 숨기기' : `팀 색상 보기 (${sortedDepts.length})`}</button>` : ''}
+      <span class="add-hint">${isAdmin ? (addMode[floor] ? '책상+의자 그림 위를 클릭하면 이름을 입력할 수 있어요' : (alignMode[floor] ? `${selCount}개 선택됨 · 같은 줄/열의 좌석들을 클릭해서 선택하세요` : '실제 책상이 있는 자리를 클릭해서 이름을 배정하세요')) : ''}</span>
+      ${totalLegendItems ? `<button class="legend-toggle" data-floor="${floor}" id="legendToggle-${floor}">${legendOpen[floor] ? '팀·시설 숨기기' : `팀·시설 보기 (${totalLegendItems})`}</button>` : ''}
     </div>
-    ${legendOpen[floor] && sortedDepts.length ? `<div class="team-legend">${legendHtml}</div>` : ''}
+    ${legendOpen[floor] && totalLegendItems ? `<div class="team-legend"><div class="team-legend-card">${legendHtml}</div></div>` : ''}
     ${alignMode[floor] && selCount >= 2 ? `
     <div class="align-bar">
       <span class="align-count">${selCount}개 선택됨</span>
@@ -5097,7 +5338,8 @@ function renderFloor(floor){
     <div class="legend">
       <span><span class="dot" style="background:#e4e1d6;border:1.5px dashed #b7b39f;"></span>공석</span>
       <span><span class="dot" style="background:#c9822f;border:1.5px dotted #7a4e14;"></span>외주석</span>
-      <span><span class="sq" style="background:#5b7a8c"></span>회의실 등 공간 이름 (소속·내선 없음)</span>
+      <span><span class="sq" style="background:#2f6f8f;border-radius:5px;"></span>회의실·세미나실 등 (이름이 "~실"로 끝남)</span>
+      <span><span class="sq" style="background:#8a5cb5;transform:rotate(45deg);"></span>OA·스낵바·자동심장충격기 등 시설물</span>
       <span><span class="sq" style="background:#1f5f5b"></span>팀 구역 (인원 명단 확인)</span>
       <span><span class="dot" style="background:#e0362b"></span>검색 결과 (깜빡임)</span>
     </div>
@@ -5292,9 +5534,17 @@ function attachMarkerEvents(){
 }
 
 function positionPopover(pop, clientX, clientY){
+  // Measure the popover's real rendered size (it's already in the DOM at this point,
+  // just not yet placed/painted) instead of guessing a fixed height - guessed heights
+  // caused the popover to run off-screen when opened near the bottom of the window.
+  pop.style.left = '-9999px';
+  pop.style.top = '0px';
+  const rect = pop.getBoundingClientRect();
+  const popW = rect.width || 280;
+  const popH = rect.height || 300;
+
   let left = clientX + 16;
   let top = clientY - 40;
-  const popW = 280, popH = 400;
   if(left + popW > window.innerWidth - 10) left = window.innerWidth - popW - 10;
   if(top + popH > window.innerHeight - 10) top = window.innerHeight - popH - 10;
   if(top < 10) top = 10;
@@ -5331,58 +5581,113 @@ function splitDeptPart(text){
 }
 
 function openSeatPopover(floor, id, anchorEl){
+  const rect = anchorEl.getBoundingClientRect();
+  if(isAdmin){
+    renderSeatEditForm(floor, id, rect, null);
+  } else {
+    renderSeatViewMode(floor, id, rect);
+  }
+}
+
+function renderSeatViewMode(floor, id, rect){
   const pop = document.getElementById('popover');
   const seat = seats[floor].find(s=>s.id===id);
-  const rect = anchorEl.getBoundingClientRect();
+  const isFacility = !seat.vacant && !seat.dept && !seat.ext;
+  const emp = empByName(seat.name);
+  const dispDept = seat.dept || (emp ? emp.dept : '') || '';
+  const dispPart = seat.part || (emp ? emp.part : '') || '';
+  const dispPosition = seat.position || (emp ? emp.position : '') || '';
+  const deptLine = [dispDept, dispPart, dispPosition].filter(Boolean).join(' · ');
 
-  if(!isAdmin){
-    // employee view: name / dept / ext are read-only, only 담당업무 is editable
-    pop.innerHTML = `
-      <h3>${seat.vacant ? '공석' : (seat.name || '(이름 없음)')}</h3>
-      <div class="pos-id">${floor}</div>
+  let rowsHtml;
+  if(isFacility){
+    // room/space/facility entries: only show fields that actually have content
+    rowsHtml = '';
+    if(deptLine) rowsHtml += `<label>소속</label><div class="readonly-field">${deptLine}</div>`;
+    if(seat.ext) rowsHtml += `<label>내선번호</label><div class="readonly-field">${seat.ext}</div>`;
+    if(seat.duty) rowsHtml += `<label>주요 용도</label><div class="readonly-field">${escapeHtml(seat.duty)}</div>`;
+    if(!rowsHtml) rowsHtml = `<p style="font-size:13px;color:var(--gray);margin:10px 0 0;">등록된 정보가 없어요.</p>`;
+  } else {
+    rowsHtml = `
       <label>소속</label>
-      <div class="readonly-field">${combineDeptPart(seat.dept, seat.part) || '-'}</div>
+      <div class="readonly-field">${deptLine || '-'}</div>
       <label>내선번호</label>
       <div class="readonly-field">${seat.ext || '-'}</div>
       <label>담당업무</label>
-      <textarea id="seatDutyInputRO" placeholder="예: 재물보험 언더라이팅" rows="2">${escapeHtml(seat.duty||'')}</textarea>
-      <div class="popover-actions">
-        <button class="btn btn-save" id="seatDutySaveBtn">저장</button>
-      </div>
-      <div class="popover-actions">
-        <button class="btn btn-close" id="seatCloseBtn" style="flex:1;">닫기</button>
-      </div>
+      <div class="readonly-field">${seat.duty ? escapeHtml(seat.duty) : '-'}</div>
     `;
-    pop.classList.add('show');
-    document.getElementById('overlayBg').classList.add('show');
-    positionPopover(pop, rect.left, rect.top);
-
-    document.getElementById('seatDutySaveBtn').onclick = async ()=>{
-      const duty = document.getElementById('seatDutyInputRO').value.trim();
-      await updateSeatDutyOnly(floor, id, duty);
-      closePopover();
-      showToast('담당업무를 저장했어요');
-    };
-    document.getElementById('seatCloseBtn').onclick = closePopover;
-    return;
   }
 
+  pop.innerHTML = `
+    <h3>${seat.vacant ? '공석' : (seat.name || '(이름 없음)')}</h3>
+    <div class="pos-id">${floor}</div>
+    ${rowsHtml}
+    <div class="popover-actions">
+      <button class="btn btn-save" id="seatEditRequestBtn">✏️ 수정</button>
+    </div>
+    <div class="popover-actions">
+      <button class="btn btn-close" id="seatCloseBtn" style="flex:1;">닫기</button>
+    </div>
+  `;
+  pop.classList.add('show');
+  document.getElementById('overlayBg').classList.add('show');
+  positionPopover(pop, rect.left, rect.top);
+
+  document.getElementById('seatEditRequestBtn').onclick = ()=>{
+    renderEditorNamePrompt(floor, id, rect);
+  };
+  document.getElementById('seatCloseBtn').onclick = closePopover;
+}
+
+function renderEditorNamePrompt(floor, id, rect){
+  const pop = document.getElementById('popover');
+  pop.innerHTML = `
+    <h3>수정하시는 분 이름</h3>
+    <div class="pos-id">수정 전에 이름을 입력해 주세요</div>
+    <input type="text" id="editorNameInput" placeholder="이름 입력">
+    <div class="popover-actions">
+      <button class="btn btn-close" id="editorCancelBtn">취소</button>
+      <button class="btn btn-save" id="editorOkBtn">확인</button>
+    </div>
+  `;
+  positionPopover(pop, rect.left, rect.top);
+  const input = document.getElementById('editorNameInput');
+  input.focus();
+
+  const submit = ()=>{
+    const editorName = input.value.trim();
+    if(!editorName){ showToast('이름을 입력해 주세요'); return; }
+    renderSeatEditForm(floor, id, rect, editorName);
+  };
+  input.addEventListener('keydown', (ev)=>{ if(ev.key === 'Enter') submit(); });
+  document.getElementById('editorOkBtn').onclick = submit;
+  document.getElementById('editorCancelBtn').onclick = ()=>{ renderSeatViewMode(floor, id, rect); };
+}
+
+function renderSeatEditForm(floor, id, rect, editorName){
+  const pop = document.getElementById('popover');
+  const seat = seats[floor].find(s=>s.id===id);
+
   const guess = nearestDept(floor, seat.x, seat.y);
+  const initialIsFacility = !seat.vacant && !seat.dept && !seat.ext;
+  const editEmp = empByName(seat.name);
+  const dispDeptEdit = seat.dept || (editEmp ? editEmp.dept : '') || '';
+  const dispPartEdit = seat.part || (editEmp ? editEmp.part : '') || '';
   pop.innerHTML = `
     <h3>배정 좌석</h3>
-    <div class="pos-id">${floor}</div>
+    <div class="pos-id">${floor}${editorName ? ' · 수정자: '+escapeHtml(editorName) : ''}</div>
     <label class="vacant-check"><input type="checkbox" id="seatVacantCheckbox" ${seat.vacant?'checked':''}> 공석 (담당자 없음)</label>
     <label>이름</label>
     <input type="text" id="seatNameInput" value="${seat.name||''}" placeholder="이름 입력 또는 검색" ${seat.vacant?'disabled':''}>
     <div class="autolist" id="seatAutolist"></div>
-    <label>소속 (팀명 · 파트명)</label>
-    <input type="text" id="seatDeptInput" value="${combineDeptPart(seat.dept, seat.part)}" placeholder="예: 재물보험팀 · 특약파트">
+    <label>소속(팀명)</label>
+    <input type="text" id="seatDeptInput" value="${combineDeptPart(dispDeptEdit, dispPartEdit)}" placeholder="예: 재물보험팀 · 특약파트">
     <label>내선번호</label>
     <input type="text" id="seatExtInput" value="${seat.ext||''}" placeholder="예: 6234 또는 010-...">
-    <label>담당업무</label>
-    <textarea id="seatDutyInput" placeholder="예: 재물보험 언더라이팅" rows="2">${escapeHtml(seat.duty||'')}</textarea>
+    <label id="seatDutyLabel">${initialIsFacility ? '주요 용도' : '담당업무'}</label>
+    <textarea id="seatDutyInput" placeholder="${initialIsFacility ? '이 공간의 주요 용도를 입력하세요' : '주요 업무를 입력하세요'}" rows="2">${escapeHtml(seat.duty||'')}</textarea>
     <div class="popover-actions">
-      <button class="btn btn-clear" id="seatDeleteBtn">좌석 삭제</button>
+      ${isAdmin ? `<button class="btn btn-clear" id="seatDeleteBtn">좌석 삭제</button>` : ''}
       <button class="btn btn-save" id="seatSaveBtn">저장</button>
     </div>
     <div class="popover-actions">
@@ -5397,9 +5702,26 @@ function openSeatPopover(floor, id, anchorEl){
 
   const vacantCb = document.getElementById('seatVacantCheckbox');
   const nameInput = document.getElementById('seatNameInput');
+  const deptInputEl = document.getElementById('seatDeptInput');
+  const extInputEl = document.getElementById('seatExtInput');
+  const dutyLabelEl = document.getElementById('seatDutyLabel');
+  const dutyInputEl = document.getElementById('seatDutyInput');
+
+  function refreshDutyLabel(){
+    const isFacility = !vacantCb.checked && !deptInputEl.value.trim() && !extInputEl.value.trim();
+    dutyLabelEl.textContent = isFacility ? '주요 용도' : '담당업무';
+    dutyInputEl.placeholder = isFacility ? '이 공간의 주요 용도를 입력하세요' : '주요 업무를 입력하세요';
+  }
+  deptInputEl.addEventListener('input', refreshDutyLabel);
+  extInputEl.addEventListener('input', refreshDutyLabel);
+  vacantCb.addEventListener('change', refreshDutyLabel);
+
   vacantCb.addEventListener('change', ()=>{
     nameInput.disabled = vacantCb.checked;
-    if(vacantCb.checked) nameInput.value = '';
+    if(vacantCb.checked){
+      nameInput.value = '';
+      document.getElementById('seatAutolist').classList.remove('show');
+    }
   });
 
   document.getElementById('seatSaveBtn').onclick = async ()=>{
@@ -5411,17 +5733,22 @@ function openSeatPopover(floor, id, anchorEl){
     const ext = isVacant ? '' : document.getElementById('seatExtInput').value.trim();
     const duty = document.getElementById('seatDutyInput').value.trim();
     if(!isVacant && !name){ showToast('이름을 입력하거나 공석으로 표시해 주세요'); return; }
+    const before = {name:seat.name||'', dept:seat.dept||'', part:seat.part||'', ext:seat.ext||'', duty:seat.duty||'', vacant:!!seat.vacant};
+    const after = {name, dept, part, ext, duty, vacant:isVacant};
     await updateSeatFull(floor, id, name, dept, part, position, ext, duty, isVacant);
+    await logChange(floor, id, editorName || '관리자', before, after);
     closePopover();
     renderAll();
     showToast(isVacant ? '공석으로 변경했어요' : `${name}님 좌석 정보 저장 완료`);
   };
-  document.getElementById('seatDeleteBtn').onclick = async ()=>{
-    await deleteSeat(floor, id);
-    closePopover();
-    renderAll();
-    showToast('좌석이 삭제되었습니다');
-  };
+  if(isAdmin){
+    document.getElementById('seatDeleteBtn').onclick = async ()=>{
+      await deleteSeat(floor, id);
+      closePopover();
+      renderAll();
+      showToast('좌석이 삭제되었습니다');
+    };
+  }
   document.getElementById('seatCloseBtn').onclick = closePopover;
 }
 
@@ -5435,12 +5762,12 @@ function openNewSeatPopover(floor, xPct, yPct, clientX, clientY){
     <label>이름</label>
     <input type="text" id="newSeatNameInput" placeholder="이름 입력 또는 검색">
     <div class="autolist" id="newSeatAutolist"></div>
-    <label>소속 (팀명 · 파트명)</label>
+    <label>소속(팀명)</label>
     <input type="text" id="newSeatDeptInput" placeholder="예: 재물보험팀 · 특약파트">
     <label>내선번호</label>
     <input type="text" id="newSeatExtInput" placeholder="예: 6234 또는 010-...">
-    <label>담당업무</label>
-    <textarea id="newSeatDutyInput" placeholder="예: 재물보험 언더라이팅" rows="2"></textarea>
+    <label id="newSeatDutyLabel">담당업무</label>
+    <textarea id="newSeatDutyInput" placeholder="주요 업무를 입력하세요" rows="2"></textarea>
     <div class="popover-actions">
       <button class="btn btn-close" id="newSeatCancelBtn">취소</button>
       <button class="btn btn-save" id="newSeatSaveBtn">저장</button>
@@ -5455,9 +5782,26 @@ function openNewSeatPopover(floor, xPct, yPct, clientX, clientY){
 
   const vacantCb = document.getElementById('newSeatVacantCheckbox');
   const nameInput = document.getElementById('newSeatNameInput');
+  const newDeptInputEl = document.getElementById('newSeatDeptInput');
+  const newExtInputEl = document.getElementById('newSeatExtInput');
+  const newDutyLabelEl = document.getElementById('newSeatDutyLabel');
+  const newDutyInputEl = document.getElementById('newSeatDutyInput');
+
+  function refreshNewDutyLabel(){
+    const isFacility = !vacantCb.checked && !newDeptInputEl.value.trim() && !newExtInputEl.value.trim();
+    newDutyLabelEl.textContent = isFacility ? '주요 용도' : '담당업무';
+    newDutyInputEl.placeholder = isFacility ? '이 공간의 주요 용도를 입력하세요' : '주요 업무를 입력하세요';
+  }
+  newDeptInputEl.addEventListener('input', refreshNewDutyLabel);
+  newExtInputEl.addEventListener('input', refreshNewDutyLabel);
+  vacantCb.addEventListener('change', refreshNewDutyLabel);
+
   vacantCb.addEventListener('change', ()=>{
     nameInput.disabled = vacantCb.checked;
-    if(vacantCb.checked) nameInput.value = '';
+    if(vacantCb.checked){
+      nameInput.value = '';
+      document.getElementById('newSeatAutolist').classList.remove('show');
+    }
   });
 
   document.getElementById('newSeatSaveBtn').onclick = async ()=>{
@@ -5486,6 +5830,7 @@ function setupNameAutocomplete(inputId, listId, deptGuess, deptInputId, extInput
   input.focus();
   input.select();
   function renderSuggestions(){
+    if(input.disabled){ autolist.classList.remove('show'); return; }
     const q = input.value.trim();
     let pool = DATA.employees;
     if(deptGuess){
@@ -5496,7 +5841,7 @@ function setupNameAutocomplete(inputId, listId, deptGuess, deptInputId, extInput
     if(q) pool = pool.filter(e=>e.name.includes(q));
     pool = pool.slice(0,8);
     if(!pool.length){ autolist.classList.remove('show'); return; }
-    autolist.innerHTML = pool.map(e=>`<div data-name="${e.name}">${e.name} <span style="color:#8b8b83;font-size:11px;">· ${e.dept}${e.position?' · '+e.position:''}</span></div>`).join('');
+    autolist.innerHTML = pool.map(e=>`<div data-name="${e.name}">${e.name} <span style="color:#8b8b83;font-size:11px;">· ${combineDeptPart(e.dept, e.part)}${e.position?' · '+e.position:''}</span></div>`).join('');
     autolist.classList.add('show');
     autolist.querySelectorAll('div').forEach(div=>{
       div.onclick = ()=>{
@@ -5630,7 +5975,7 @@ function runSearch(q){
       return `<div class="sr-item" data-name="${e.name}">
         <div>
           <div class="sr-name">${e.name}</div>
-          <div class="sr-meta">${e.dept}${e.position ? ' · '+e.position : ''}</div>
+          <div class="sr-meta">${combineDeptPart(e.dept, e.part)}${e.position ? ' · '+e.position : ''}</div>
         </div>
         <span class="sr-loc ${seat?'':'unassigned'}">${locLabel}</span>
       </div>`;
@@ -5641,7 +5986,7 @@ function runSearch(q){
       return `<div class="sr-item" data-name="${e.name}">
         <div>
           <div class="sr-name">${e.name}</div>
-          <div class="sr-meta">${e.dept || '전화번호부 미등록'}${e.position ? ' · '+e.position : ''}</div>
+          <div class="sr-meta">${combineDeptPart(e.dept, e.part) || '전화번호부 미등록'}${e.position ? ' · '+e.position : ''}</div>
         </div>
         <span class="sr-loc ${seat?'':'unassigned'}">${locLabel}</span>
       </div>`;
@@ -5677,22 +6022,34 @@ function goToRoom(floor, label){
 }
 
 function goToEmployee(name){
-  const seat = findSeatForName(name);
+  const allSeats = findAllSeatsForName(name);
   document.getElementById('searchResults').classList.remove('show');
   document.getElementById('searchInput').value = name;
-  if(!seat){
+  if(!allSeats.length){
     setHighlight(null);
     showToast(`${name}님은 아직 좌석이 배정되지 않았습니다`);
     return;
   }
-  setHighlight({floor: seat.floor, ids: [seat.id]});
-  currentFloor = seat.floor;
+  const primaryFloor = allSeats[0].floor;
+  const idsOnPrimaryFloor = allSeats.filter(s=>s.floor===primaryFloor).map(s=>s.id);
+
+  setHighlight({floor: primaryFloor, ids: idsOnPrimaryFloor});
+  currentFloor = primaryFloor;
   renderAll();
   requestAnimationFrame(()=>{
-    const view = document.querySelector(`.floor-view[data-floor="${seat.floor}"]`);
-    const marker = view.querySelector(`.marker[data-id="${CSS.escape(seat.id)}"]`);
+    const view = document.querySelector(`.floor-view[data-floor="${primaryFloor}"]`);
+    const marker = view.querySelector(`.marker[data-id="${CSS.escape(allSeats[0].id)}"]`);
     if(marker) marker.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
   });
+
+  if(allSeats.length > 1){
+    const distinctFloors = [...new Set(allSeats.map(s=>s.floor))];
+    if(distinctFloors.length > 1){
+      showToast(`${name}님과 일치하는 좌석이 ${distinctFloors.join(', ')}에 걸쳐 ${allSeats.length}곳 있어요 (중복 입력 가능성) · 지금은 ${primaryFloor}만 표시`);
+    } else {
+      showToast(`${name}님과 일치하는 좌석이 ${allSeats.length}곳 있어요 (중복 입력일 수 있어요)`);
+    }
+  }
 }
 
 function goToGroup(kind, value){
@@ -5747,6 +6104,17 @@ document.getElementById('searchInput').addEventListener('input', (e)=>{
   }
   searchDebounce = setTimeout(()=>runSearch(e.target.value), 80);
 });
+document.getElementById('searchInput').addEventListener('keydown', (e)=>{
+  if(e.key !== 'Enter') return;
+  e.preventDefault();
+  clearTimeout(searchDebounce);
+  const q = e.target.value.trim();
+  if(!q) return;
+  runSearch(q); // ensure results reflect the current text even if debounce hasn't fired yet
+  const first = document.querySelector('#searchResults .sr-item');
+  if(first) first.click();
+  else showToast(`'${q}' 검색 결과가 없습니다`);
+});
 document.addEventListener('click', (e)=>{
   if(!e.target.closest('.search-wrap')) document.getElementById('searchResults').classList.remove('show');
 });
@@ -5788,6 +6156,97 @@ async function importBackup(file){
     showToast('백업 파일을 읽는 데 실패했어요. 파일 형식을 확인해 주세요');
   }
 }
+
+async function openChangeLogModal(){
+  const pop = document.getElementById('popover');
+  pop.classList.add('wide');
+  pop.innerHTML = `<h3>수정 목록</h3><div class="pos-id">불러오는 중...</div>`;
+  pop.classList.add('show');
+  document.getElementById('overlayBg').classList.add('show');
+  pop.style.left = Math.max(10, window.innerWidth/2 - 210) + 'px';
+  pop.style.top = '40px';
+
+  let log = [];
+  try{
+    const res = await gsGet(CHANGE_LOG_KEY);
+    if(res && res.value) log = JSON.parse(res.value);
+  }catch(e){ /* no log yet */ }
+
+  const rows = log.slice().reverse().map(entry=>{
+    const t = new Date(entry.time);
+    const timeStr = `${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+    return `<div class="log-row">
+      <div class="log-row-top"><b>${escapeHtml(entry.afterName||'(이름 없음)')}</b> <span class="log-floor">${entry.floor}</span> <span class="log-editor">${escapeHtml(entry.editor||'')}</span> <span class="log-time">${timeStr}</span></div>
+      <div class="log-diffs">${entry.diffs.map(d=>escapeHtml(d)).join(' · ')}</div>
+    </div>`;
+  }).join('');
+
+  pop.innerHTML = `
+    <h3>수정 목록</h3>
+    <div class="pos-id">${log.length ? `최근 ${log.length}건 (최신순)` : '아직 수정 기록이 없어요'}</div>
+    <div class="log-list">${rows}</div>
+    <div class="popover-actions">
+      ${log.length ? `<button class="btn btn-clear" id="clearLogBtn">전체 지우기</button>` : ''}
+      <button class="btn btn-close" id="logCloseBtn" style="flex:1;">닫기</button>
+    </div>
+  `;
+  if(log.length){
+    document.getElementById('clearLogBtn').onclick = ()=>{
+      openConfirmPopover('수정 기록을 전부 지울까요?\n(좌석 데이터 자체는 지워지지 않아요)', async ()=>{
+        await gsSet(CHANGE_LOG_KEY, JSON.stringify([]));
+        showToast('수정 기록을 지웠어요');
+      });
+    };
+  }
+  document.getElementById('logCloseBtn').onclick = ()=>{
+    pop.classList.remove('wide');
+    closePopover();
+  };
+}
+document.getElementById('changeLogBtn').addEventListener('click', openChangeLogModal);
+
+function openHelpModal(){
+  const pop = document.getElementById('popover');
+  pop.classList.add('wide');
+  pop.innerHTML = `
+    <h3>이용 방법</h3>
+    <div class="help-content">
+      <h4>🔍 검색</h4>
+      <p>상단 검색창에 <b>이름·팀명·파트명·공간 이름</b>(회의실, 라운지 등)을 입력하면 배치도에서 위치를 찾아 빨간색으로 깜빡이며 표시해줘요.</p>
+
+      <h4>🖱️ 좌석 정보 확인·수정</h4>
+      <p>배치도 위 점(도형)을 클릭하면 정보창이 열려요. <b>이름, 소속, 내선번호, 담당업무</b>를 직접 입력하거나 수정할 수 있어요.</p>
+      <ul>
+        <li>자리가 바뀌었다면 이름을 직접 고쳐주세요.</li>
+        <li>자리가 비었다면 "공석" 체크박스를 눌러주세요.</li>
+        <li>회의실·시설물처럼 소속·내선번호가 없는 곳은 "주요 용도"를 입력할 수 있어요.</li>
+      </ul>
+
+      <h4>🎨 도형·색상 의미</h4>
+      <div class="shape-row"><span class="shape-swatch" style="background:#4a9d6f;border-radius:50%;"></span> 원 = 직원 좌석 (팀마다 색이 달라요)</div>
+      <div class="shape-row"><span class="shape-swatch" style="background:#2f6f8f;border-radius:5px;"></span> 둥근 사각형 = 회의실 등 공간</div>
+      <div class="shape-row"><span class="shape-swatch" style="background:#8a5cb5;transform:rotate(45deg);"></span> 마름모 = OA·시설물</div>
+      <div class="shape-row"><span class="shape-swatch" style="background:#e4e1d6;border:1.5px dashed #b7b39f;border-radius:50%;"></span> 점선 회색 원 = 공석</div>
+      <div class="shape-row"><span class="shape-swatch" style="background:#c9822f;border:1.5px dotted #7a4e14;border-radius:50%;"></span> 점선 주황 원 = 외주석</div>
+
+      <h4>📋 팀·시설 보기</h4>
+      <p>각 층 화면의 <b>"팀·시설 보기"</b> 버튼을 누르면 그 층에 있는 팀·회의실·시설물 목록과 색상을 한눈에 볼 수 있어요. 항목을 클릭하면 해당 위치가 바로 표시돼요.</p>
+    </div>
+    <div class="popover-actions">
+      <button class="btn btn-close" id="helpCloseBtn" style="flex:1;">닫기</button>
+    </div>
+  `;
+  pop.classList.add('show');
+  document.getElementById('overlayBg').classList.add('show');
+  pop.style.left = Math.max(10, window.innerWidth/2 - 210) + 'px';
+  pop.style.top = '40px';
+  document.getElementById('helpCloseBtn').onclick = ()=>{
+    pop.classList.remove('wide');
+    closePopover();
+  };
+}
+
+document.getElementById('helpBtn').addEventListener('click', openHelpModal);
 
 function openConfirmPopover(message, onConfirm){
   const pop = document.getElementById('popover');
@@ -5868,12 +6327,12 @@ function updateAdminUI(){
   const btn = document.getElementById('adminToggleBtn');
   const adminOnly = document.getElementById('adminOnlyBtns');
   const modeHint = document.getElementById('modeHint');
-  btn.textContent = isAdmin ? '🔓 관리자 모드 (켜짐)' : '🔒 관리자 모드';
+  btn.textContent = isAdmin ? '관리자 모드 켜짐' : '관리자';
   btn.classList.toggle('on', isAdmin);
   adminOnly.style.display = isAdmin ? 'inline' : 'none';
   modeHint.textContent = isAdmin
     ? '관리자 모드: 좌석 추가/삭제, 정렬, 명단 동기화가 가능해요'
-    : '좌석을 클릭하면 담당업무를 직접 입력할 수 있어요';
+    : '좌석을 클릭하면 이름·소속·담당업무 등을 직접 수정할 수 있어요';
 }
 
 document.getElementById('adminToggleBtn').addEventListener('click', (e)=>{
@@ -5923,10 +6382,36 @@ function openAdminPinPopover(anchorEl){
   document.getElementById('adminPinCancelBtn').onclick = closePopover;
 }
 
+async function silentRefresh(){
+  // Skip entirely while a popover is open, so we never clobber an in-progress edit.
+  if(document.getElementById('overlayBg').classList.contains('show')) return;
+
+  let anyChanged = false;
+  for(const floor of Object.keys(DATA.floors)){
+    try{
+      const res = await gsGet(floorKey(floor));
+      if(res && res.value){
+        const fresh = JSON.parse(res.value);
+        const freshStr = JSON.stringify(fresh);
+        const currentStr = JSON.stringify(seats[floor]);
+        if(freshStr !== currentStr){
+          seats[floor] = fresh;
+          anyChanged = true;
+        }
+      }
+    }catch(e){
+      // quiet failure - this is a background refresh, not a user-initiated action
+      console.warn('silent refresh failed for', floor, e);
+    }
+  }
+  if(anyChanged) renderAll();
+}
+
 (async function init(){
   updateAdminUI();
   await loadAssignments();
   renderAll();
+  setInterval(silentRefresh, 60000); // check for updates from other users once a minute
 })();
 </script>
 </body>

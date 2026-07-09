@@ -759,12 +759,9 @@
     pointer-events:none;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-  .help-fab{
-    position:fixed;
-    top:16px;
-    right:16px;
-    z-index:150;
-    padding:8px 16px;
+  .help-tab-btn{
+    margin-left:auto;
+    padding:7px 16px;
     border-radius:20px;
     border:1px solid var(--line);
     background:var(--white);
@@ -772,9 +769,8 @@
     font-size:13px;
     font-weight:600;
     cursor:pointer;
-    box-shadow:0 2px 8px rgba(0,0,0,0.1);
   }
-  .help-fab:hover{background:var(--paper);}
+  .help-tab-btn:hover{background:var(--paper);}
 </style>
 </head>
 <body>
@@ -800,7 +796,6 @@
       <span class="backup-hint" id="modeHint">작업 중간중간 내보내기를 눌러 저장해 두세요</span>
     </div>
   </header>
-  <button class="help-fab" id="helpBtn">❓ 이용 방법</button>
   <main id="main"></main>
   <footer>
     <span id="footerLeft">2026.7.1 배치도 기준 · 좌석 배정은 직접 입력해 주세요</span>
@@ -5173,6 +5168,11 @@ function renderTabs(){
     btn.onclick = () => { currentFloor = floor; renderAll(); };
     tabs.appendChild(btn);
   }
+  const helpBtn = document.createElement('button');
+  helpBtn.className = 'help-tab-btn';
+  helpBtn.textContent = '❓ 이용 방법';
+  helpBtn.onclick = openHelpModal;
+  tabs.appendChild(helpBtn);
 }
 
 function deptShort(s){ return s ? s.replace(/\(.*?\)/,'') : ''; }
@@ -6246,7 +6246,6 @@ function openHelpModal(){
   };
 }
 
-document.getElementById('helpBtn').addEventListener('click', openHelpModal);
 
 function openConfirmPopover(message, onConfirm){
   const pop = document.getElementById('popover');

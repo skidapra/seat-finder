@@ -5276,6 +5276,17 @@ function renderTabs(){
     btn.onclick = () => { currentFloor = floor; renderAll(); };
     tabs.appendChild(btn);
   }
+  const {totalLegendItems} = buildLegendData(currentFloor);
+  if(totalLegendItems){
+    const legendBtn = document.createElement('button');
+    legendBtn.className = 'legend-toggle' + (legendOpen ? ' on' : '');
+    legendBtn.textContent = legendOpen ? '팀·시설 숨기기' : `🎨 팀·시설 보기 (${totalLegendItems})`;
+    legendBtn.onclick = ()=>{
+      legendOpen = !legendOpen;
+      renderAll();
+    };
+    tabs.appendChild(legendBtn);
+  }
   const helpBtn = document.createElement('button');
   helpBtn.className = 'help-tab-btn';
   helpBtn.textContent = '❓ 이용 방법';
@@ -5318,51 +5329,14 @@ function categorizeLegendItem(value, kind){
 
 let legendOpen = false;
 
-function renderFloor(floor){
-  const f = DATA.floors[floor];
-  let markers = '';
-  const hiIds = (highlighted && highlighted.floor===floor) ? highlighted.ids : [];
-  const showHiLabels = !(highlighted && highlighted.showLabels === false);
+function buildLegendData(floor){
   const deptsHere = new Set();
   const roomLabelsHere = new Set();
-  const sel = selectedSeats[floor];
-
   for(const s of seats[floor]){
-    const isHi = hiIds.includes(s.id);
     const isVacant = s.vacant === true;
     const isRoomLabel = !isVacant && !s.dept && !s.ext;
-    const isRoomType = isRoomLabel && endsWithRoomSuffix(s.name);
-    const isFacilityType = isRoomLabel && !isRoomType;
-    const isSelected = sel.has(s.id);
-    const isOut = !isRoomLabel && !isVacant && isOutsourced(s.dept);
-    const color = (isRoomLabel || isVacant) ? null : (isOut ? '#c9822f' : colorForDept(s.dept));
     if(!isRoomLabel && !isVacant && s.dept) deptsHere.add(s.dept);
     if(isRoomLabel && s.name) roomLabelsHere.add(s.name);
-    const styleAttr = color ? `background:${color};` : '';
-    const emp = empByName(s.name);
-    const partLabel = s.part || (emp ? emp.part : '') || '';
-    const labelText = isVacant
-      ? `공석${s.dept ? ' · '+s.dept : ''}`
-      : `${s.name || '(이름 없음)'}${partLabel ? ' · '+partLabel : (s.dept ? ' · '+s.dept : '')}`;
-    markers += `<div class="marker-wrap ${isHi&&showHiLabels?'show-label':''}" style="position:absolute;left:${s.x}%;top:${s.y}%;">
-      ${isHi && showHiLabels ? `<div class="seat-highlight-ring" style="left:0;top:0;"></div>` : ''}
-      <div class="marker seat ${isRoomType?'room-type':''} ${isFacilityType?'facility-type':''} ${isVacant?'vacant':''} ${isOut?'outsourced':''} ${isHi?'highlight':''} ${isSelected?'selected':''}" style="${styleAttr}" data-floor="${floor}" data-id="${s.id}" data-type="seat"></div>
-      <div class="marker-label">${labelText}</div>
-    </div>`;
-  }
-  for(const z of f.zones){
-    const isTeam = z.members && z.members.length;
-    const isHi = hiIds.includes(z.id);
-    markers += `<div class="marker-wrap ${isHi&&showHiLabels?'show-label':''}" style="position:absolute;left:${z.x}%;top:${z.y}%;">
-      ${isHi && showHiLabels ? `<div class="seat-highlight-ring" style="left:0;top:0;"></div>` : ''}
-      <div class="marker zone ${isTeam?'':'info'} ${isHi?'highlight':''}" data-floor="${floor}" data-id="${z.id}" data-type="zone"></div>
-      <div class="marker-label">${z.dept || z.label || z.id}${isTeam ? ' ('+z.members.length+'명)' : ''}</div>
-    </div>`;
-  }
-  if(highlighted && highlighted.floor===floor && highlighted.anchor){
-    const a = highlighted.anchor;
-    markers += `<div class="zone-anchor" style="left:${a.x}%;top:${a.y}%;"></div>
-      <div class="zone-anchor-label" style="left:${a.x}%;top:${a.y}%;">${a.label}</div>`;
   }
 
   const sortedDepts = [...deptsHere].sort();
@@ -5413,8 +5387,54 @@ function renderFloor(floor){
     return `<div class="legend-category ${catClass}"><span class="legend-cat-label">${cat}</span><div class="legend-cat-items">${items}</div></div>`;
   }).join('');
 
-  const selCount = sel.size;
   const totalLegendItems = Object.values(grouped).reduce((sum,arr)=>sum+arr.length,0);
+  return {legendHtml, totalLegendItems};
+}
+
+function renderFloor(floor){
+  const f = DATA.floors[floor];
+  let markers = '';
+  const hiIds = (highlighted && highlighted.floor===floor) ? highlighted.ids : [];
+  const showHiLabels = !(highlighted && highlighted.showLabels === false);
+  const sel = selectedSeats[floor];
+
+  for(const s of seats[floor]){
+    const isHi = hiIds.includes(s.id);
+    const isVacant = s.vacant === true;
+    const isRoomLabel = !isVacant && !s.dept && !s.ext;
+    const isRoomType = isRoomLabel && endsWithRoomSuffix(s.name);
+    const isFacilityType = isRoomLabel && !isRoomType;
+    const isSelected = sel.has(s.id);
+    const isOut = !isRoomLabel && !isVacant && isOutsourced(s.dept);
+    const color = (isRoomLabel || isVacant) ? null : (isOut ? '#c9822f' : colorForDept(s.dept));
+    const styleAttr = color ? `background:${color};` : '';
+    const emp = empByName(s.name);
+    const partLabel = s.part || (emp ? emp.part : '') || '';
+    const labelText = isVacant
+      ? `공석${s.dept ? ' · '+s.dept : ''}`
+      : `${s.name || '(이름 없음)'}${partLabel ? ' · '+partLabel : (s.dept ? ' · '+s.dept : '')}`;
+    markers += `<div class="marker-wrap ${isHi&&showHiLabels?'show-label':''}" style="position:absolute;left:${s.x}%;top:${s.y}%;">
+      ${isHi && showHiLabels ? `<div class="seat-highlight-ring" style="left:0;top:0;"></div>` : ''}
+      <div class="marker seat ${isRoomType?'room-type':''} ${isFacilityType?'facility-type':''} ${isVacant?'vacant':''} ${isOut?'outsourced':''} ${isHi?'highlight':''} ${isSelected?'selected':''}" style="${styleAttr}" data-floor="${floor}" data-id="${s.id}" data-type="seat"></div>
+      <div class="marker-label">${labelText}</div>
+    </div>`;
+  }
+  for(const z of f.zones){
+    const isTeam = z.members && z.members.length;
+    const isHi = hiIds.includes(z.id);
+    markers += `<div class="marker-wrap ${isHi&&showHiLabels?'show-label':''}" style="position:absolute;left:${z.x}%;top:${z.y}%;">
+      ${isHi && showHiLabels ? `<div class="seat-highlight-ring" style="left:0;top:0;"></div>` : ''}
+      <div class="marker zone ${isTeam?'':'info'} ${isHi?'highlight':''}" data-floor="${floor}" data-id="${z.id}" data-type="zone"></div>
+      <div class="marker-label">${z.dept || z.label || z.id}${isTeam ? ' ('+z.members.length+'명)' : ''}</div>
+    </div>`;
+  }
+  if(highlighted && highlighted.floor===floor && highlighted.anchor){
+    const a = highlighted.anchor;
+    markers += `<div class="zone-anchor" style="left:${a.x}%;top:${a.y}%;"></div>
+      <div class="zone-anchor-label" style="left:${a.x}%;top:${a.y}%;">${a.label}</div>`;
+  }
+
+  const selCount = sel.size;
 
   return `<div class="floor-view ${floor===currentFloor?'active':''}" data-floor="${floor}">
     <div class="floor-toolbar">
@@ -5425,9 +5445,8 @@ function renderFloor(floor){
         ${alignMode[floor] ? '정렬 모드 · 좌석을 클릭해 선택' : '↕ 정렬 모드'}
       </button>` : ''}
       <span class="add-hint">${isAdmin ? (addMode[floor] ? '책상+의자 그림 위를 클릭하면 이름을 입력할 수 있어요' : (alignMode[floor] ? `${selCount}개 선택됨 · 같은 줄/열의 좌석들을 클릭해서 선택하세요` : '실제 책상이 있는 자리를 클릭해서 이름을 배정하세요')) : ''}</span>
-      ${totalLegendItems ? `<button class="legend-toggle ${legendOpen?'on':''}" data-floor="${floor}" id="legendToggle-${floor}">${legendOpen ? '팀·시설 숨기기' : `🎨 팀·시설 보기 (${totalLegendItems})`}</button>` : ''}
     </div>
-    ${legendOpen && totalLegendItems ? `<div class="team-legend"><div class="team-legend-card">${legendHtml}</div></div>` : ''}
+    ${(()=>{ const {legendHtml, totalLegendItems} = buildLegendData(floor); return legendOpen && totalLegendItems ? `<div class="team-legend"><div class="team-legend-card">${legendHtml}</div></div>` : ''; })()}
     ${alignMode[floor] && selCount >= 2 ? `
     <div class="align-bar">
       <span class="align-count">${selCount}개 선택됨</span>
@@ -5554,13 +5573,6 @@ function attachAddToggleEvents(){
       const floor = btn.dataset.floor;
       alignMode[floor] = !alignMode[floor];
       if(alignMode[floor]){ addMode[floor] = false; } else { selectedSeats[floor].clear(); }
-      renderAll();
-    };
-  });
-  document.querySelectorAll('.legend-toggle').forEach(btn=>{
-    btn.onclick = (e)=>{
-      e.stopPropagation();
-      legendOpen = !legendOpen;
       renderAll();
     };
   });

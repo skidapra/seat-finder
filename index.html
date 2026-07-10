@@ -256,17 +256,22 @@
   }
   .legend-toggle{
     margin-left:auto;
-    padding:7px 14px;
+    padding:8px 16px;
     border-radius:20px;
-    border:1px solid var(--line);
-    background:var(--white);
-    color:var(--ink);
-    font-size:12.5px;
-    font-weight:600;
+    border:1.5px solid var(--accent);
+    background:var(--accent);
+    color:var(--white);
+    font-size:13px;
+    font-weight:700;
     cursor:pointer;
     white-space:nowrap;
+    box-shadow:0 2px 6px rgba(0,0,0,0.12);
   }
-  .legend-toggle:hover{background:var(--paper);}
+  .legend-toggle:hover{background:var(--accent);filter:brightness(1.08);}
+  .legend-toggle.on{
+    background:var(--white);
+    color:var(--accent);
+  }
   .marker.selected{
     box-shadow:0 0 0 3px #2d6cdf, 0 0 0 1px rgba(0,0,0,0.25) !important;
     z-index:15;
@@ -5276,7 +5281,7 @@ function categorizeLegendItem(value, kind){
   return endsWithRoomSuffix(value) ? 'Space' : 'Facility';
 }
 
-let legendOpen = { "4F":false, "5F":false, "7F":false };
+let legendOpen = false;
 
 function renderFloor(floor){
   const f = DATA.floors[floor];
@@ -5385,9 +5390,9 @@ function renderFloor(floor){
         ${alignMode[floor] ? '정렬 모드 · 좌석을 클릭해 선택' : '↕ 정렬 모드'}
       </button>` : ''}
       <span class="add-hint">${isAdmin ? (addMode[floor] ? '책상+의자 그림 위를 클릭하면 이름을 입력할 수 있어요' : (alignMode[floor] ? `${selCount}개 선택됨 · 같은 줄/열의 좌석들을 클릭해서 선택하세요` : '실제 책상이 있는 자리를 클릭해서 이름을 배정하세요')) : ''}</span>
-      ${totalLegendItems ? `<button class="legend-toggle" data-floor="${floor}" id="legendToggle-${floor}">${legendOpen[floor] ? '팀·시설 숨기기' : `팀·시설 보기 (${totalLegendItems})`}</button>` : ''}
+      ${totalLegendItems ? `<button class="legend-toggle ${legendOpen?'on':''}" data-floor="${floor}" id="legendToggle-${floor}">${legendOpen ? '팀·시설 숨기기' : `🎨 팀·시설 보기 (${totalLegendItems})`}</button>` : ''}
     </div>
-    ${legendOpen[floor] && totalLegendItems ? `<div class="team-legend"><div class="team-legend-card">${legendHtml}</div></div>` : ''}
+    ${legendOpen && totalLegendItems ? `<div class="team-legend"><div class="team-legend-card">${legendHtml}</div></div>` : ''}
     ${alignMode[floor] && selCount >= 2 ? `
     <div class="align-bar">
       <span class="align-count">${selCount}개 선택됨</span>
@@ -5520,8 +5525,7 @@ function attachAddToggleEvents(){
   document.querySelectorAll('.legend-toggle').forEach(btn=>{
     btn.onclick = (e)=>{
       e.stopPropagation();
-      const floor = btn.dataset.floor;
-      legendOpen[floor] = !legendOpen[floor];
+      legendOpen = !legendOpen;
       renderAll();
     };
   });

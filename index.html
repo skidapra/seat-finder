@@ -5045,43 +5045,47 @@ async function loadFloorChunked(floor){
   return result.data;
 }
 
-async function loadAssignments(){
-  for(const floor of Object.keys(DATA.floors)){
-    let loaded = null;
+async function loadOneFloor(floor){
+  let loaded = null;
+  let needsHeal = false;
+
+  try{
+    loaded = await loadFloorChunked(floor);
+  }catch(e){
+    console.error('chunked load failed for', floor, e);
+    showToast(`${floor} 데이터를 불러오는 데 실패했어요`);
+  }
+
+  if(loaded === null){
+    // no chunked data yet - fall back to the old single-cell key
     try{
-      loaded = await loadFloorChunked(floor);
-    }catch(e){
-      console.error('chunked load failed for', floor, e);
-      showToast(`${floor} 데이터를 불러오는 데 실패했어요`);
-    }
-
-    if(loaded === null){
-      // no chunked data yet - fall back to the old single-cell key
-      try{
-        const res = await gsGet(floorKey(floor));
-        if(res && res.value){
-          const result = tryRecoverTruncatedJsonArray(res.value);
-          if(result){
-            loaded = result.data;
-            if(result.recovered) showToast(`${floor} 데이터 일부가 손상되어 있어 복구했어요. 최근 입력 1건 정도가 누락됐을 수 있어요`);
-          }
+      const res = await gsGet(floorKey(floor));
+      if(res && res.value){
+        const result = tryRecoverTruncatedJsonArray(res.value);
+        if(result){
+          loaded = result.data;
+          needsHeal = true; // came from the legacy key - move it to the chunked format
+          if(result.recovered) showToast(`${floor} 데이터 일부가 손상되어 있어 복구했어요. 최근 입력 1건 정도가 누락됐을 수 있어요`);
         }
-      }catch(e){
-        console.error('apps script load failed', e);
-        showToast('구글 시트 연결에 실패했어요. 네트워크를 확인해 주세요');
       }
-    }
-
-    if(loaded){
-      seats[floor] = loaded;
-      // heal: re-save through the new chunked path so this floor never
-      // depends on the old single-cell key (and its size limit) again
-      await persistFloorSeats(floor, loaded);
-    } else {
-      // nothing anywhere yet - try to recover from the old window.storage data once
-      seats[floor] = await migrateFromWindowStorage(floor);
+    }catch(e){
+      console.error('apps script load failed', e);
+      showToast('구글 시트 연결에 실패했어요. 네트워크를 확인해 주세요');
     }
   }
+
+  if(loaded){
+    seats[floor] = loaded;
+    if(needsHeal) await persistFloorSeats(floor, loaded); // one-time migration only, not on every load
+  } else {
+    // nothing anywhere yet - try to recover from the old window.storage data once
+    seats[floor] = await migrateFromWindowStorage(floor);
+  }
+}
+
+async function loadAssignments(){
+  // floors are independent - load them all in parallel instead of one-by-one
+  await Promise.all(Object.keys(DATA.floors).map(loadOneFloor));
   await migrateExecOffices();
 }
 
@@ -5345,14 +5349,18 @@ let legendCustomOrder = {}; // `${floor}:${cat}` -> array of item values, admin-
 function legendOrderKey(floor, cat){ return `legendOrder:${floor}:${cat}`; }
 
 async function loadAllLegendOrders(){
+  const tasks = [];
   for(const floor of Object.keys(DATA.floors)){
     for(const cat of ['Team','Meeting Room','Space','Facility']){
-      try{
-        const res = await gsGet(legendOrderKey(floor, cat));
-        if(res && res.value) legendCustomOrder[`${floor}:${cat}`] = JSON.parse(res.value);
-      }catch(e){ /* no custom order saved yet for this floor/category */ }
+      tasks.push((async ()=>{
+        try{
+          const res = await gsGet(legendOrderKey(floor, cat));
+          if(res && res.value) legendCustomOrder[`${floor}:${cat}`] = JSON.parse(res.value);
+        }catch(e){ /* no custom order saved yet for this floor/category */ }
+      })());
     }
   }
+  await Promise.all(tasks);
 }
 
 async function saveLegendOrder(floor, cat, orderArr){
@@ -6641,9 +6649,18 @@ async function silentRefresh(){
   }, 15000);
 
   updateAdminUI();
-  await loadAssignments();
-  await loadAllLegendOrders();
-  renderAll();
+  try{
+    await loadAssignments();
+  }catch(e){
+    console.error('loadAssignments failed entirely', e);
+    showToast('데이터를 불러오는 중 문제가 있었어요. 새로고침해 주세요');
+  }
+  try{
+    await loadAllLegendOrders();
+  }catch(e){
+    console.error('loadAllLegendOrders failed entirely', e);
+  }
+  renderAll(); // always render, even if the above had partial failures - never leave the screen blank
   clearTimeout(safetyTimer);
   if(loader) loader.classList.add('hide');
   setInterval(silentRefresh, 60000); // check for updates from other users once a minute

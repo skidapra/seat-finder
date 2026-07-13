@@ -382,6 +382,17 @@
     background:var(--accent-soft);
     border-color:var(--accent);
   }
+  .legend-team.draggable{
+    cursor:grab;
+  }
+  .legend-team.draggable:active{cursor:grabbing;}
+  .legend-team.dragging{
+    opacity:0.4;
+  }
+  .legend-cat-items.drag-over{
+    background:var(--accent-soft);
+    border-radius:8px;
+  }
   .marker{
     position:absolute;
     transform:translate(-50%,-50%);
@@ -5329,6 +5340,40 @@ function categorizeLegendItem(value, kind){
 
 let legendOpen = false;
 
+let legendCustomOrder = {}; // `${floor}:${cat}` -> array of item values, admin-defined drag order
+
+function legendOrderKey(floor, cat){ return `legendOrder:${floor}:${cat}`; }
+
+async function loadAllLegendOrders(){
+  for(const floor of Object.keys(DATA.floors)){
+    for(const cat of ['Team','Meeting Room','Space','Facility']){
+      try{
+        const res = await gsGet(legendOrderKey(floor, cat));
+        if(res && res.value) legendCustomOrder[`${floor}:${cat}`] = JSON.parse(res.value);
+      }catch(e){ /* no custom order saved yet for this floor/category */ }
+    }
+  }
+}
+
+async function saveLegendOrder(floor, cat, orderArr){
+  legendCustomOrder[`${floor}:${cat}`] = orderArr;
+  try{ await gsSet(legendOrderKey(floor, cat), JSON.stringify(orderArr)); }
+  catch(e){ console.warn('failed to save legend order', e); }
+}
+
+function applyCustomLegendOrder(floor, cat, items){
+  const custom = legendCustomOrder[`${floor}:${cat}`];
+  if(!custom || !custom.length) return items;
+  const byValue = new Map(items.map(it=>[it.value, it]));
+  const ordered = [];
+  for(const v of custom){
+    if(byValue.has(v)){ ordered.push(byValue.get(v)); byValue.delete(v); }
+  }
+  // anything not covered by the saved order (newly added items) goes at the end
+  for(const rest of byValue.values()) ordered.push(rest);
+  return ordered;
+}
+
 function buildLegendData(floor){
   const deptsHere = new Set();
   const roomLabelsHere = new Set();
@@ -5379,12 +5424,17 @@ function buildLegendData(floor){
     return facilityDisplayOrder.length;
   }
   grouped['Facility'].sort((a,b)=> facilitySortKey(a.value)-facilitySortKey(b.value) || a.value.localeCompare(b.value));
+
+  for(const cat of categoryOrder){
+    grouped[cat] = applyCustomLegendOrder(floor, cat, grouped[cat]);
+  }
+
   const legendHtml = categoryOrder.filter(cat=>grouped[cat] && grouped[cat].length).map(cat=>{
-    const items = grouped[cat].map(({value, kind, cat: itemCat})=>
-      `<span class="legend-team" data-value="${value}" data-kind="${kind}" data-floor="${floor}"><span class="dot" style="background:${dotColorForCategory(itemCat, value)}"></span>${value}</span>`
+    const items = grouped[cat].map(({value, kind, cat: itemCat}, idx)=>
+      `<span class="legend-team ${isAdmin?'draggable':''}" draggable="${isAdmin?'true':'false'}" data-value="${value}" data-kind="${kind}" data-floor="${floor}" data-cat="${cat}" data-idx="${idx}"><span class="dot" style="background:${dotColorForCategory(itemCat, value)}"></span>${value}</span>`
     ).join('');
     const catClass = 'cat-' + cat.toLowerCase().replace(/\s+/g,'-');
-    return `<div class="legend-category ${catClass}"><span class="legend-cat-label">${cat}</span><div class="legend-cat-items">${items}</div></div>`;
+    return `<div class="legend-category ${catClass}"><span class="legend-cat-label">${cat}</span><div class="legend-cat-items" data-floor="${floor}" data-cat="${cat}">${items}</div></div>`;
   }).join('');
 
   const totalLegendItems = Object.values(grouped).reduce((sum,arr)=>sum+arr.length,0);
@@ -5485,12 +5535,56 @@ function renderAll(){
   document.getElementById('footerRight').textContent = `전체 ${DATA.employees.length}명 등록 · ${totalAssigned}개 좌석 배정 완료`;
 }
 
+let draggedLegendItem = null; // {el, floor, cat}
+
 function attachLegendTeamEvents(){
   document.querySelectorAll('.legend-team').forEach(el=>{
     el.addEventListener('click', (e)=>{
       e.stopPropagation();
+      if(el.dataset.dragMoved){ delete el.dataset.dragMoved; return; } // suppress click right after a drag
       if(el.dataset.kind === 'room') goToRoomLabelColor(el.dataset.value, el.dataset.floor);
       else goToTeamColor(el.dataset.value, el.dataset.floor);
+    });
+
+    if(el.classList.contains('draggable')){
+      el.addEventListener('dragstart', (e)=>{
+        draggedLegendItem = {el, floor: el.dataset.floor, cat: el.dataset.cat};
+        el.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      el.addEventListener('dragend', ()=>{
+        el.classList.remove('dragging');
+        draggedLegendItem = null;
+      });
+    }
+  });
+
+  document.querySelectorAll('.legend-cat-items').forEach(container=>{
+    container.addEventListener('dragover', (e)=>{
+      if(!draggedLegendItem) return;
+      if(draggedLegendItem.floor !== container.dataset.floor || draggedLegendItem.cat !== container.dataset.cat) return;
+      e.preventDefault();
+      container.classList.add('drag-over');
+      const target = e.target.closest('.legend-team');
+      if(target && target !== draggedLegendItem.el){
+        const rect = target.getBoundingClientRect();
+        const before = (e.clientX - rect.left) < rect.width/2;
+        container.insertBefore(draggedLegendItem.el, before ? target : target.nextSibling);
+      }
+    });
+    container.addEventListener('dragleave', (e)=>{
+      if(e.target === container) container.classList.remove('drag-over');
+    });
+    container.addEventListener('drop', async (e)=>{
+      e.preventDefault();
+      container.classList.remove('drag-over');
+      if(!draggedLegendItem) return;
+      const {floor, cat} = draggedLegendItem;
+      draggedLegendItem.el.dataset.dragMoved = '1';
+      const newOrder = [...container.querySelectorAll('.legend-team')].map(el=>el.dataset.value);
+      await saveLegendOrder(floor, cat, newOrder);
+      showToast('순서를 저장했어요');
+      renderAll();
     });
   });
 }
@@ -6548,6 +6642,7 @@ async function silentRefresh(){
 
   updateAdminUI();
   await loadAssignments();
+  await loadAllLegendOrders();
   renderAll();
   clearTimeout(safetyTimer);
   if(loader) loader.classList.add('hide');

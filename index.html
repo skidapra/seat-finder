@@ -4985,8 +4985,9 @@ function setHighlight(obj){
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRfxp1RJe0ESOIOoJPOlPn1WjKRoqgQ_IW6ih2vkLSadaBCnNKjnk0X7QwaeH-mnTF5g/exec';
 
 function floorKey(floor){ return `seatsData:${floor}`; } // legacy single-cell key (pre-chunking)
-function chunkMetaKey(floor){ return `seatsData:${floor}:meta`; }
 function chunkKey(floor, i){ return `seatsData:${floor}:chunk:${i}`; }
+const ALL_META_KEY = 'seatsMetaAll'; // {"4F":{"count":1}, "5F":{"count":2}, ...} - one request instead of one-per-floor
+let floorMetaCache = {};
 const CHUNK_SIZE = 40000; // safely under Google Sheets' ~50,000 char-per-cell limit
 // legacy window.storage keys, kept only for one-time migration into Apps Script
 function legacySeatKey(floor, id){ return `seat:${floor}:${id}`; }
@@ -5006,6 +5007,33 @@ async function gsSet(key, value){
   });
   if(!res.ok) throw new Error('POST failed: ' + res.status);
   return res.json();
+}
+
+async function loadAllFloorMeta(){
+  try{
+    const res = await gsGet(ALL_META_KEY);
+    if(res && res.value){
+      floorMetaCache = JSON.parse(res.value);
+      return;
+    }
+  }catch(e){ /* fall through to legacy per-floor meta check below */ }
+
+  // one-time migration: earlier versions stored one meta key per floor
+  // (seatsData:{floor}:meta) - check those so existing data isn't orphaned
+  const floors = Object.keys(DATA.floors);
+  const results = await Promise.all(
+    floors.map(f => gsGet(`seatsData:${f}:meta`).catch(()=>null))
+  );
+  let foundAny = false;
+  results.forEach((res, i)=>{
+    if(res && res.value){
+      try{ floorMetaCache[floors[i]] = JSON.parse(res.value); foundAny = true; }
+      catch(e){ /* ignore malformed legacy meta */ }
+    }
+  });
+  if(foundAny){
+    try{ await gsSet(ALL_META_KEY, JSON.stringify(floorMetaCache)); }catch(e){ /* will retry on next save */ }
+  }
 }
 
 // Best-effort recovery for a JSON array string that was cut off mid-object
@@ -5029,15 +5057,13 @@ function tryRecoverTruncatedJsonArray(str){
 }
 
 async function loadFloorChunked(floor){
-  const metaRes = await gsGet(chunkMetaKey(floor));
-  if(!metaRes || !metaRes.value) return null; // not saved in chunked format yet
-  const meta = JSON.parse(metaRes.value);
+  const meta = floorMetaCache[floor];
+  if(!meta) return null; // not saved in chunked format yet
   const count = meta.count || 0;
-  let full = '';
-  for(let i=0; i<count; i++){
-    const res = await gsGet(chunkKey(floor, i));
-    full += (res && res.value) ? res.value : '';
-  }
+  const results = await Promise.all(
+    Array.from({length: count}, (_, i) => gsGet(chunkKey(floor, i)))
+  );
+  const full = results.map(res => (res && res.value) ? res.value : '').join('');
   if(!full) return [];
   const result = tryRecoverTruncatedJsonArray(full);
   if(!result) throw new Error('chunked data corrupted');
@@ -5128,11 +5154,10 @@ async function persistFloorSeats(floor, seatArr){
 
   for(let attempt=1; attempt<=2; attempt++){
     try{
-      for(let i=0; i<chunks.length; i++){
-        const res = await gsSet(chunkKey(floor, i), chunks[i]);
-        if(!res) throw new Error('chunk write failed');
-      }
-      const metaRes = await gsSet(chunkMetaKey(floor), JSON.stringify({count: chunks.length}));
+      const results = await Promise.all(chunks.map((c,i)=>gsSet(chunkKey(floor, i), c)));
+      if(results.some(r=>!r)) throw new Error('chunk write failed');
+      floorMetaCache[floor] = {count: chunks.length};
+      const metaRes = await gsSet(ALL_META_KEY, JSON.stringify(floorMetaCache));
       if(!metaRes) throw new Error('meta write failed');
       return true;
     }catch(e){
@@ -5346,26 +5371,18 @@ let legendOpen = false;
 
 let legendCustomOrder = {}; // `${floor}:${cat}` -> array of item values, admin-defined drag order
 
-function legendOrderKey(floor, cat){ return `legendOrder:${floor}:${cat}`; }
+const LEGEND_ORDER_KEY = 'legendOrderAll';
 
 async function loadAllLegendOrders(){
-  const tasks = [];
-  for(const floor of Object.keys(DATA.floors)){
-    for(const cat of ['Team','Meeting Room','Space','Facility']){
-      tasks.push((async ()=>{
-        try{
-          const res = await gsGet(legendOrderKey(floor, cat));
-          if(res && res.value) legendCustomOrder[`${floor}:${cat}`] = JSON.parse(res.value);
-        }catch(e){ /* no custom order saved yet for this floor/category */ }
-      })());
-    }
-  }
-  await Promise.all(tasks);
+  try{
+    const res = await gsGet(LEGEND_ORDER_KEY);
+    if(res && res.value) legendCustomOrder = JSON.parse(res.value);
+  }catch(e){ /* no custom orders saved yet */ }
 }
 
 async function saveLegendOrder(floor, cat, orderArr){
   legendCustomOrder[`${floor}:${cat}`] = orderArr;
-  try{ await gsSet(legendOrderKey(floor, cat), JSON.stringify(orderArr)); }
+  try{ await gsSet(LEGEND_ORDER_KEY, JSON.stringify(legendCustomOrder)); }
   catch(e){ console.warn('failed to save legend order', e); }
 }
 
@@ -6637,6 +6654,8 @@ async function silentRefresh(){
   // Skip entirely while a popover is open, so we never clobber an in-progress edit.
   if(document.getElementById('overlayBg').classList.contains('show')) return;
 
+  try{ await loadAllFloorMeta(); }catch(e){ /* keep using the last known meta */ }
+
   let anyChanged = false;
   for(const floor of Object.keys(DATA.floors)){
     try{
@@ -6668,16 +6687,19 @@ async function silentRefresh(){
 
   updateAdminUI();
   try{
-    await loadAssignments();
+    await loadAllFloorMeta();
   }catch(e){
-    console.error('loadAssignments failed entirely', e);
-    showToast('데이터를 불러오는 중 문제가 있었어요. 새로고침해 주세요');
+    console.error('loadAllFloorMeta failed', e);
   }
-  try{
-    await loadAllLegendOrders();
-  }catch(e){
-    console.error('loadAllLegendOrders failed entirely', e);
-  }
+  await Promise.all([
+    loadAssignments().catch(e=>{
+      console.error('loadAssignments failed entirely', e);
+      showToast('데이터를 불러오는 중 문제가 있었어요. 새로고침해 주세요');
+    }),
+    loadAllLegendOrders().catch(e=>{
+      console.error('loadAllLegendOrders failed entirely', e);
+    })
+  ]);
   renderAll(); // always render, even if the above had partial failures - never leave the screen blank
   clearTimeout(safetyTimer);
   if(loader) loader.classList.add('hide');

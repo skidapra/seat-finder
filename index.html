@@ -256,21 +256,30 @@
   }
   .legend-toggle{
     margin-left:auto;
-    padding:8px 16px;
-    border-radius:20px;
-    border:1.5px solid var(--accent);
-    background:var(--accent);
-    color:var(--white);
-    font-size:13px;
-    font-weight:700;
+    padding:10px 20px;
+    border-radius:22px;
+    border:2px solid #4fb8a8;
+    background:#7ce0d3;
+    color:var(--ink);
+    font-size:14.5px;
+    font-weight:800;
     cursor:pointer;
     white-space:nowrap;
-    box-shadow:0 2px 6px rgba(0,0,0,0.12);
+    box-shadow:0 3px 10px rgba(79,184,168,0.4);
+    animation:legend-pulse 2.2s ease-in-out infinite;
   }
-  .legend-toggle:hover{background:var(--accent);filter:brightness(1.08);}
+  .legend-toggle:hover{background:#6ad4c6;}
   .legend-toggle.on{
     background:var(--white);
-    color:var(--accent);
+    color:#2a8a7a;
+    border-color:#4fb8a8;
+    animation:none;
+    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  }
+  @keyframes legend-pulse{
+    0%{box-shadow:0 3px 10px rgba(79,184,168,0.4);}
+    50%{box-shadow:0 3px 16px rgba(79,184,168,0.75);}
+    100%{box-shadow:0 3px 10px rgba(79,184,168,0.4);}
   }
   .marker.selected{
     box-shadow:0 0 0 3px #2d6cdf, 0 0 0 1px rgba(0,0,0,0.25) !important;
@@ -5320,7 +5329,7 @@ function renderTabs(){
   if(totalLegendItems){
     const legendBtn = document.createElement('button');
     legendBtn.className = 'legend-toggle' + (legendOpen ? ' on' : '');
-    legendBtn.textContent = legendOpen ? '팀·시설 숨기기' : `🎨 팀·시설 보기 (${totalLegendItems})`;
+    legendBtn.textContent = legendOpen ? '전체 목록 숨기기' : `🎨 전체 목록 보기 (${totalLegendItems})`;
     legendBtn.onclick = ()=>{
       legendOpen = !legendOpen;
       renderAll();
@@ -5538,11 +5547,11 @@ function renderFloor(floor){
       </div>
     </div>
     <div class="legend">
+      <span><span class="dot" style="background:var(--accent)"></span>직원석 (팀별 색상)</span>
       <span><span class="dot" style="background:#e4e1d6;border:1.5px dashed #b7b39f;"></span>공석</span>
       <span><span class="dot" style="background:#c9822f;border:1.5px dotted #7a4e14;"></span>외주석</span>
-      <span><span class="sq" style="background:#2f6f8f;border-radius:5px;"></span>회의실·세미나실 등</span>
+      <span><span class="sq" style="background:#2f6f8f;border-radius:2px;"></span>회의실·세미나실 등</span>
       <span><span class="sq" style="background:#8a5cb5;transform:rotate(45deg);"></span>OA·스낵바·자동심장충격기 등 시설물</span>
-      <span><span class="sq" style="background:#1f5f5b"></span>팀 구역 (인원 명단 확인)</span>
       <span><span class="dot" style="background:#e0362b"></span>검색 결과 (깜빡임)</span>
     </div>
   </div>`;
@@ -6491,11 +6500,11 @@ function openHelpModal(){
         <li>자리가 비었다면 "공석" 체크박스를 눌러주세요.</li>
       </ul>
 
-      <h4>📋 팀·시설 보기</h4>
-      <p>각 층 화면의 <b>"팀·시설 보기"</b> 버튼을 누르면 그 층에 있는 팀·회의실·시설물 목록과 색상을 한눈에 볼 수 있어요. 항목을 클릭하면 해당 위치가 바로 표시돼요.</p>
+      <h4>📋 전체 목록 보기</h4>
+      <p>각 층 화면의 <b>"전체 목록 보기"</b> 버튼을 누르면 그 층에 있는 팀·회의실·시설물 목록과 색상을 한눈에 볼 수 있어요. 항목을 클릭하면 해당 위치가 바로 표시돼요.</p>
 
       <h4>🎨 도형·색상 의미</h4>
-      <div class="shape-row"><span class="shape-swatch" style="background:#4a9d6f;border-radius:50%;"></span> 원 = 직원 좌석 (팀마다 색이 달라요)</div>
+      <div class="shape-row"><span class="shape-swatch" style="background:#4a9d6f;border-radius:50%;"></span> 원 = 직원 좌석 (팀별 색상)</div>
       <div class="shape-row"><span class="shape-swatch" style="background:#2f6f8f;border-radius:5px;"></span> 둥근 사각형 = 회의실 등 공간</div>
       <div class="shape-row"><span class="shape-swatch" style="background:#8a5cb5;transform:rotate(45deg);"></span> 마름모 = OA·시설물</div>
       <div class="shape-row"><span class="shape-swatch" style="background:#e4e1d6;border:1.5px dashed #b7b39f;border-radius:50%;"></span> 점선 회색 원 = 공석</div>
